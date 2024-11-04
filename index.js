@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const port = 5000;
 const authRoutes = require('./routes/authRoutes');  // Import routes
 const equipmentRoutes = require('./routes/addEquipment') //route for adding or viewing rental equipments
-
+const notificationRoute = require('./routes/notificationRoute');
 dotenv.config();
 
 // Initialize Express app
@@ -26,6 +26,7 @@ mongoose.connect(process.env.MONGODB_URL, {
 // Set up routes
 app.use('/api/auth', authRoutes);  // Use the authentication routes
 app.use('/api/rentalSystem',equipmentRoutes);
+app.use('/api',notificationRoute);
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
