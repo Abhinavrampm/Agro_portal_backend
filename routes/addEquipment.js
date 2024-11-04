@@ -104,6 +104,11 @@ router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
     const { rentalDays, message } = req.body;
     const renterId = req.user; // Get the user ID from the authenticated request
 
+    // Validate input
+    if (!rentalDays || !message) {
+        return res.status(400).json({ message: 'Rental days and message are required' });
+    }
+
     try {
         // Find the equipment item by ID
         const equipment = await EquipmentRental.findById(equipmentId);
@@ -111,19 +116,16 @@ router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Equipment not found' });
         }
 
-        // Create the new offer using the Offer model
+        // Create the new offer
         const newOffer = new Offer({
             renterId,
+            equipmentId,
             rentalDays,
             message,
         });
 
         // Save the offer to the database
         await newOffer.save();
-
-        // Add the offer ID to the equipment's offers array
-        equipment.offers.push(newOffer._id);
-        await equipment.save(); // Save the updated equipment document
 
         // Notify the equipment owner
         const ownerId = equipment.ownerId;
@@ -132,26 +134,26 @@ router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
             const notification = {
                 message,
                 equipmentId,
-                offerId: newOffer._id, // This now references the new offer
+                offerId: newOffer._id,
                 senderId: renterId,
             };
             owner.notifications.push(notification);
             await owner.save();
         }
-        //notify the renter 
-        const renter = await Farmreg.findById(renterId);
-        if(renter) {
-            const notification = {
 
-                message:`Your have requested for ${equipment.name} from ${equipment.userName}`,
-                equipmentId:equipmentId,
-                offerId: newOffer._id
-            }
-            renter.notifications.push(notification); // push the notification to renter
+        // Notify the renter
+        const renter = await Farmreg.findById(renterId);
+        if (renter) {
+            const notification = {
+                message: `You have requested ${equipment.name} from ${equipment.userName}`,
+                equipmentId: equipmentId,
+                offerId: newOffer._id,
+            };
+            renter.notifications.push(notification);
             await renter.save();
         }
 
-        res.status(201).json({ message: 'Offer created successfully' });
+        res.status(201).json({ message: 'Offer created successfully', offerId: newOffer._id });
     } catch (error) {
         console.error("Error creating offer:", error); // Log error for debugging
         res.status(500).json({ message: 'Error creating offer', error });
@@ -162,26 +164,28 @@ router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
 
 
 
+
 // Accept an offer
 router.post('/accept-offer/:equipmentId/:offerId', authMiddleware, async (req, res) => {
     const { equipmentId, offerId } = req.params;
-
+    console.log(equipmentId);
     try {
         const equipment = await EquipmentRental.findById(equipmentId);
-        const offer = equipment.offers.id(offerId);
+        const offer = await Offer.findById(offerId);;
         if (!offer) return res.status(404).json({ message: 'Offer not found' });
 
         offer.status = 'accepted';
         equipment.available = false; // Mark equipment as not available
+        console.log("Rental days:",offer.rentalDays);
         equipment.returnDate = new Date(Date.now() + offer.rentalDays * 24 * 60 * 60 * 1000); // Calculate return date
-
+        await offer.save()
         await equipment.save();
-
+        console.log('changed equipment is:',equipment);
         // Notify the renter
         const renter = await Farmreg.findById(offer.renterId);
         if (renter) {
             renter.notifications.push({
-                message: `Your offer for ${equipment.name} has been accepted. Return by ${equipment.rentedUntil.toLocaleDateString()}.`,
+                message: `Your offer for ${equipment.name} has been accepted. Return by ${equipment.returnDate.toLocaleDateString()}.`,
                 equipmentId,
                 offerId,
             });
@@ -200,7 +204,7 @@ router.post('/reject-offer/:equipmentId/:offerId', authMiddleware, async (req, r
 
     try {
         const equipment = await EquipmentRental.findById(equipmentId);
-        const offer = equipment.offers.id(offerId);
+        const offer = await Offer.findbyId(offerId);
         if (!offer) return res.status(404).json({ message: 'Offer not found' });
 
         offer.status = 'rejected';

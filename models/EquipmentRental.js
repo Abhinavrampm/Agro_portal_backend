@@ -1,6 +1,5 @@
 // models/EquipmentRental.js
 const mongoose = require('mongoose');
-const Offer = require('./Offer.js'); // Import the Offer model
 
 const equipmentRentalSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -23,7 +22,6 @@ const equipmentRentalSchema = new mongoose.Schema({
     userName: { type: String, required: true }, // Name of the user
     createdAt: { type: Date, default: Date.now },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Farmreg', required: true },
-    offers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Offer' }], // Reference to the Offer model
 });
 
 const EquipmentRental = mongoose.model('EquipmentRental', equipmentRentalSchema);

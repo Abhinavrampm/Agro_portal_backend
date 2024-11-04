@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-//define the notification schema
+// Define the notification schema
 const notificationSchema = new mongoose.Schema({
     message: {
         type: String,
@@ -19,7 +19,9 @@ const notificationSchema = new mongoose.Schema({
         ref: 'EquipmentRental', // Reference to the equipment listing
     },
     offerId: {
-        type: mongoose.Schema.Types.ObjectId, // Holds the specific offer's ID within EquipmentRental.offers
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Offer', // Reference to the offer
+        required: true
     },
     senderId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -27,13 +29,13 @@ const notificationSchema = new mongoose.Schema({
     },
 });
 
-//define the user schema
+// Define the user schema
 const userSchema = new mongoose.Schema({
-    name:{
+    name: {
         type: String,
         required: true,
     },
-    email:{
+    email: {
         type: String,
         required: true,
         unique: true,
@@ -41,14 +43,14 @@ const userSchema = new mongoose.Schema({
     phoneNo: {
         type: String,
         required: true,
-        match: /^[0-9]{10}$/, //ensures only 10 digits
+        match: /^[0-9]{10}$/, // Ensures only 10 digits
     },
     password: {
         type: String,
         required: true,
     },
-    notifications:[notificationSchema]
+    notifications: [notificationSchema]
 });
 
-const Farmreg = mongoose.model('Farmreg',userSchema);
+const Farmreg = mongoose.model('Farmreg', userSchema);
 module.exports = Farmreg;
