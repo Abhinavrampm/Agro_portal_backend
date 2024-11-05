@@ -98,135 +98,108 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Create an offer with notification
 router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
     const { equipmentId } = req.params;
     const { rentalDays, message } = req.body;
-    const renterId = req.user; // Get the user ID from the authenticated request
-
-    // Validate input
-    if (!rentalDays || !message) {
-        return res.status(400).json({ message: 'Rental days and message are required' });
-    }
+    const renterId = req.user;
 
     try {
-        // Find the equipment item by ID
         const equipment = await EquipmentRental.findById(equipmentId);
-        if (!equipment) {
-            return res.status(404).json({ message: 'Equipment not found' });
-        }
+        if (!equipment) return res.status(404).json({ message: 'Equipment not found' });
 
-        // Create the new offer
-        const newOffer = new Offer({
-            renterId,
-            equipmentId,
-            rentalDays,
-            message,
-        });
-
-        // Save the offer to the database
+        const newOffer = new Offer({ renterId, equipmentId, rentalDays, message, status: 'requested' });
         await newOffer.save();
 
-        // Notify the equipment owner
-        const ownerId = equipment.ownerId;
-        const owner = await Farmreg.findById(ownerId);
+        // Notify owner with type 'offer'
+        const owner = await Farmreg.findById(equipment.ownerId);
         if (owner) {
-            const notification = {
+            owner.notifications.push({
                 message,
+                notificationType: 'offer',
                 equipmentId,
-                offerId: newOffer._id,
                 senderId: renterId,
-            };
-            owner.notifications.push(notification);
+                offerId: newOffer._id,
+            });
             await owner.save();
         }
 
-        // Notify the renter
+        // Notify renter with type 'request'
         const renter = await Farmreg.findById(renterId);
         if (renter) {
-            const notification = {
-                message: `You have requested ${equipment.name} from ${equipment.userName}`,
-                equipmentId: equipmentId,
+            renter.notifications.push({
+                message: `Your request for ${equipment.name} has been sent to the owner.`,
+                notificationType: 'request',
+                equipmentId,
                 offerId: newOffer._id,
-            };
-            renter.notifications.push(notification);
+            });
             await renter.save();
         }
 
-        res.status(201).json({ message: 'Offer created successfully', offerId: newOffer._id });
+        res.status(201).json({ message: 'Offer created and notifications sent', offerId: newOffer._id });
     } catch (error) {
-        console.error("Error creating offer:", error); // Log error for debugging
         res.status(500).json({ message: 'Error creating offer', error });
     }
 });
 
-
-
-
-
-
-// Accept an offer
+// Accept offer route - notify renter with 'request' type
 router.post('/accept-offer/:equipmentId/:offerId', authMiddleware, async (req, res) => {
     const { equipmentId, offerId } = req.params;
-    console.log(equipmentId);
+
     try {
-        const equipment = await EquipmentRental.findById(equipmentId);
-        const offer = await Offer.findById(offerId);;
+        const offer = await Offer.findById(offerId);
         if (!offer) return res.status(404).json({ message: 'Offer not found' });
 
+        const equipment = await EquipmentRental.findById(equipmentId);
         offer.status = 'accepted';
-        equipment.available = false; // Mark equipment as not available
-        console.log("Rental days:",offer.rentalDays);
-        equipment.returnDate = new Date(Date.now() + offer.rentalDays * 24 * 60 * 60 * 1000); // Calculate return date
-        await offer.save()
+        equipment.available = false;
+        equipment.returnDate = new Date(Date.now() + offer.rentalDays * 24 * 60 * 60 * 1000);
+        await offer.save();
         await equipment.save();
-        console.log('changed equipment is:',equipment);
-        // Notify the renter
+
         const renter = await Farmreg.findById(offer.renterId);
         if (renter) {
             renter.notifications.push({
-                message: `Your offer for ${equipment.name} has been accepted. Return by ${equipment.returnDate.toLocaleDateString()}.`,
+                message: `Your offer for ${equipment.name} has been accepted.`,
+                notificationType: 'request',
                 equipmentId,
                 offerId,
             });
             await renter.save();
         }
 
-        res.status(200).json({ message: 'Offer accepted' });
+        res.status(200).json({ message: 'Offer accepted and renter notified' });
     } catch (error) {
-        res.status(500).json({ message: 'Error accepting offer.', error });
+        res.status(500).json({ message: 'Error accepting offer', error });
     }
 });
 
-
+// Reject offer route - notify renter with 'request' type
 router.post('/reject-offer/:equipmentId/:offerId', authMiddleware, async (req, res) => {
     const { equipmentId, offerId } = req.params;
 
     try {
-        const equipment = await EquipmentRental.findById(equipmentId);
-        const offer = await Offer.findbyId(offerId);
+        const offer = await Offer.findById(offerId);
         if (!offer) return res.status(404).json({ message: 'Offer not found' });
 
         offer.status = 'rejected';
-        await equipment.save();
+        await offer.save();
 
-        // Notify the renter
         const renter = await Farmreg.findById(offer.renterId);
         if (renter) {
             renter.notifications.push({
                 message: `Your offer for ${equipment.name} has been rejected.`,
+                notificationType: 'request',
                 equipmentId,
                 offerId,
             });
             await renter.save();
         }
 
-        res.status(200).json({ message: 'Offer rejected' });
+        res.status(200).json({ message: 'Offer rejected and renter notified' });
     } catch (error) {
-        res.status(500).json({ message: 'Error rejecting offer.', error });
+        res.status(500).json({ message: 'Error rejecting offer', error });
     }
 });
-
 
 
 

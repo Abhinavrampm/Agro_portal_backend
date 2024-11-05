@@ -20,13 +20,17 @@ const notificationSchema = new mongoose.Schema({
     },
     offerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Offer', // Reference to the offer
-        required: true
+        ref: 'Offer', // Reference to the offer (used in "offer" notifications)
     },
     senderId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Farmreg', // Reference to the user who sent the offer
+        ref: 'Farmreg', // Reference to the user who sent the offer/request
     },
+    notificationType: {
+        type: String,
+        enum: ['offer', 'request'],
+ // Specifies if it's an "offer" or "request" notification
+    }
 });
 
 // Define the user schema
