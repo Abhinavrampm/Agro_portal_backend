@@ -107,6 +107,17 @@ router.post('/offer/:equipmentId', authMiddleware, async (req, res) => {
         const equipment = await EquipmentRental.findById(equipmentId);
         if (!equipment) return res.status(404).json({ message: 'Equipment not found' });
 
+        // Check if there is an existing request from this user for this equipment
+        // const existingOffer = await Offer.findOne({
+        //     equipmentId,
+        //     renterId: userId,
+        //     status: { $in: ['requested', 'accepted'] } // Only allow new requests if none are pending
+        // });
+
+        // if (existingOffer) {
+        //     return res.status(400).json({ message: 'You already have a pending or accepted request for this equipment.' });
+        // }
+
         const newOffer = new Offer({ renterId, equipmentId, rentalDays, message, status: 'requested' });
         await newOffer.save();
 
@@ -148,14 +159,15 @@ router.post('/accept-offer/:equipmentId/:offerId', authMiddleware, async (req, r
     try {
         const offer = await Offer.findById(offerId);
         if (!offer) return res.status(404).json({ message: 'Offer not found' });
-
+        console.log('Offer :',offerId);
+        console.log('Equipment:',equipmentId);
         const equipment = await EquipmentRental.findById(equipmentId);
+       
         offer.status = 'accepted';
         equipment.available = false;
         equipment.returnDate = new Date(Date.now() + offer.rentalDays * 24 * 60 * 60 * 1000);
         await offer.save();
         await equipment.save();
-
         const renter = await Farmreg.findById(offer.renterId);
         if (renter) {
             renter.notifications.push({
