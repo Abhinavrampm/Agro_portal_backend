@@ -25,25 +25,21 @@ router.get('/notifications', authMiddleware, async (req, res) => {
     }
 });
 
-
-router.delete('/notifications/:id', authMiddleware, async (req, res) => {
+router.delete('/notifications/:notificationId', authMiddleware, async (req, res) => {
     try {
+        const { notificationId } = req.params;
         const userId = req.user;
-        const notificationId = req.params.id;
 
-        // Find the user and delete the specific notification
-        const user = await Farmreg.findById(userId);
-        user.notifications = user.notifications.filter(notification =>
-            notification._id.toString() !== notificationId
-        );
-        await user.save();
+        // Remove the notification
+        await Farmreg.findByIdAndUpdate(userId, {
+            $pull: { notifications: { _id: notificationId } }
+        });
 
-        res.status(200).json({ message: 'Notification deleted successfully' });
+        res.status(200).json({ message: 'Notification deleted' });
     } catch (error) {
         console.error('Error deleting notification:', error);
         res.status(500).json({ error: 'Failed to delete notification' });
     }
 });
-
 
 module.exports = router;

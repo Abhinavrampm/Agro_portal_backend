@@ -179,6 +179,10 @@ router.post('/accept-offer/:equipmentId/:offerId', authMiddleware, async (req, r
             await renter.save();
         }
 
+        await Farmreg.findByIdAndUpdate(userId, {
+            $pull: { notifications: { offerId, notificationType: 'offer' } }
+        });
+
         res.status(200).json({ message: 'Offer accepted and renter notified' });
     } catch (error) {
         res.status(500).json({ message: 'Error accepting offer', error });
@@ -206,6 +210,10 @@ router.post('/reject-offer/:equipmentId/:offerId', authMiddleware, async (req, r
             });
             await renter.save();
         }
+
+        await Farmreg.findByIdAndUpdate(userId, {
+            $pull: { notifications: { offerId, notificationType: 'offer' } }
+        });
 
         res.status(200).json({ message: 'Offer rejected and renter notified' });
     } catch (error) {
