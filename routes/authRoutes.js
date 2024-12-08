@@ -3,11 +3,16 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware')
 const Farmreg = require('../models/Farmreg');
-// Signup route
+const Workerreg = require('../models/Workerreg');
+// Farmer Signup route
 router.post('/signup', authController.signup);
 
-// Login route
+// Farmer Login route
 router.post('/login', authController.login);
+//Worker signup route
+router.post('/Workersignup',authController.Workersignup);
+//Worker login route
+router.post('/Workerlogin',authController.Workerlogin);
 
  //Get the logged-in user's profile
 router.get('/profile', authMiddleware, async (req, res) => {
